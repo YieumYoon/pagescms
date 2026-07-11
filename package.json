@@ -7,6 +7,13 @@
   },
   "version": "2.1.8",
   "private": true,
+  "allowScripts": {
+    "esbuild": true,
+    "sharp": true,
+    "unrs-resolver": true,
+    "msw": true,
+    "fsevents": false
+  },
   "scripts": {
     "setup:github-app": "node scripts/setup-github-app.mjs",
     "dev": "next dev",
