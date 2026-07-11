@@ -33,7 +33,6 @@ async function main() {
 
   const localCallbackUrl = `http://${host}:${port}/api/github-app/callback`;
   const userAuthorizationCallbackUrl = `${baseUrl}/api/auth/callback/github`;
-  const webhookUrl = `${baseUrl}/api/webhook/github`;
   const setupUrl = `${baseUrl}/`;
 
   const manifest = {
@@ -45,32 +44,14 @@ async function main() {
       "Pages CMS is an open source CMS for editing content in GitHub repositories.",
     public: false,
     default_permissions: {
-      administration: "write",
-      actions: "write",
-      checks: "read",
-      statuses: "read",
       contents: "write",
-      email_addresses: "read",
+      emails: "read",
       metadata: "read",
     },
-    default_events: [
-      "installation_target",
-      "repository",
-      "push",
-      "delete",
-      "check_run",
-      "check_suite",
-      "status",
-      "workflow_run",
-    ],
+    default_events: [],
     request_oauth_on_install: false,
     setup_on_update: true,
     setup_url: setupUrl,
-    hook_attributes: {
-      url: webhookUrl,
-      active: true,
-      secret: webhookSecret,
-    },
   };
 
   const appCreationUrl =
@@ -102,7 +83,7 @@ async function main() {
     GITHUB_APP_CLIENT_ID: converted.client_id,
     GITHUB_APP_CLIENT_SECRET: converted.client_secret,
     GITHUB_APP_PRIVATE_KEY: wrapQuoted(escapeNewlines(converted.pem || "")),
-    GITHUB_APP_WEBHOOK_SECRET: webhookSecret,
+    GITHUB_APP_WEBHOOK_SECRET: converted.webhook_secret || webhookSecret,
   };
 
   if (envPath) {
@@ -122,7 +103,7 @@ async function main() {
   }
   console.log(`- User authorization callback: ${userAuthorizationCallbackUrl}`);
   console.log(`- Setup URL: ${setupUrl}`);
-  console.log(`- Webhook URL: ${webhookUrl}`);
+  console.log("- Webhook URL: not configured by the local helper.");
   console.log("\nNext:");
   console.log("1) Install the app on your target account/repositories.");
   console.log("   Disable 'User-to-server token expiration' if GitHub shows that option.");

@@ -81,6 +81,9 @@ export const auth = betterAuth({
         if (!profile.email && emails) {
           profile.email = (emails.find((entry) => entry.primary) ?? emails[0])?.email as string;
         }
+        if (!profile.email) {
+          profile.email = `${profile.id}+${profile.login}@users.noreply.github.com`;
+        }
         const emailVerified = emails?.find((entry) => entry.email === profile.email)?.verified ?? false;
 
         const userMap = {

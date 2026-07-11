@@ -11,6 +11,7 @@ import * as richTextField from "@/fields/core/rich-text";
 import * as selectField from "@/fields/core/select";
 import * as stringField from "@/fields/core/string";
 import * as textField from "@/fields/core/text";
+import * as timestampActionsField from "@/fields/core/timestamp-actions";
 import * as uuidField from "@/fields/core/uuid";
 
 type FieldModule = {
@@ -55,6 +56,7 @@ registerField("rich-text", richTextField);
 registerField("select", selectField);
 registerField("string", stringField);
 registerField("text", textField);
+registerField("timestamp-actions", timestampActionsField);
 registerField("uuid", uuidField);
 
 export { labels, schemas, readFns, writeFns, defaultValues, editComponents, viewComponents, fieldTypes };
