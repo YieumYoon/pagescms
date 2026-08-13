@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { getSchemaByName } from "@/lib/schema";
 import { cn } from "@/lib/utils";
 import { requireApiSuccess } from "@/lib/api-client";
+import { prepareMediaUpload } from "@/lib/image-upload";
 import type { FileSaveData } from "@/types/api";
 
 interface MediaUploadContextValue {
@@ -66,12 +67,13 @@ function MediaUploadRoot({ children, path, onUpload, media, extensions, multiple
   const handleFiles = useCallback(async (files: File[]) => {
     try {
       for (const file of files) {
-        const uploadFilename = getUploadFileName(
-          file.name,
-          rename ?? configMedia?.rename,
-        );
-
         const uploadPromise = (async () => {
+          const preparedFile = await prepareMediaUpload(file);
+          const uploadFilename = getUploadFileName(
+            preparedFile.name,
+            rename ?? configMedia?.rename,
+          );
+
           const content = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => {
@@ -79,7 +81,7 @@ function MediaUploadRoot({ children, path, onUpload, media, extensions, multiple
               resolve(base64Content);
             };
             reader.onerror = () => reject(new Error("Failed to read file"));
-            reader.readAsDataURL(file);
+            reader.readAsDataURL(preparedFile);
           });
 
           const fullPath = joinPathSegments([path ?? "", uploadFilename]);

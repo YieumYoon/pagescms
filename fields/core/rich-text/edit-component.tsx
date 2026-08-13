@@ -29,6 +29,7 @@ import {
   relativeToRawUrls,
   swapPrefix,
 } from "@/lib/github-image";
+import { prepareMediaUpload } from "@/lib/image-upload";
 import {
   decodePathSafely,
   extensionCategories,
@@ -772,16 +773,17 @@ const EditComponent = forwardRef(
           );
         }
 
+        const preparedFile = await prepareMediaUpload(file);
         const dataUrl = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(String(reader.result ?? ""));
           reader.onerror = () =>
             reject(new Error("Failed to read image file."));
-          reader.readAsDataURL(file);
+          reader.readAsDataURL(preparedFile);
         });
         const content = dataUrl.replace(/^(.+,)/, "");
         const uploadFilename = getUploadFileName(
-          file.name,
+          preparedFile.name,
           options.rename ?? mediaConfig.rename,
         );
         const targetPath = joinPathSegments([
