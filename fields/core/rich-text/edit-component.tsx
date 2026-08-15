@@ -639,9 +639,12 @@ const EditComponent = forwardRef(
       const key = `rich-text:${name}`;
       return registerBeforeSubmitHook(key, async () => {
         if (modeRef.current !== "editor") return;
+        if (pendingUploads > 0 || editorValueRef.current.includes("blob:")) {
+          throw new Error("Wait for image uploads to finish before saving.");
+        }
         await syncEditorToSource();
       });
-    }, [name, registerBeforeSubmitHook, syncEditorToSource]);
+    }, [name, pendingUploads, registerBeforeSubmitHook, syncEditorToSource]);
 
     const handleSwitchToEditor = useCallback(async () => {
       if (pendingUploads > 0) return;

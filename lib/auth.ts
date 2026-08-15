@@ -157,7 +157,6 @@ export const auth = betterAuth({
     },
   },
   plugins: [
-    nextCookies(),
     emailOTP({
       expiresIn: 300,
       otpLength: 6,
@@ -183,5 +182,7 @@ export const auth = betterAuth({
         });
       },
     }),
+    // Must remain last so cookies from every preceding auth plugin are applied.
+    nextCookies(),
   ],
 });

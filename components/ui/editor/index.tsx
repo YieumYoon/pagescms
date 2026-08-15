@@ -14,6 +14,7 @@ import TableCell from "@tiptap/extension-table-cell";
 import { Markdown } from "@tiptap/markdown";
 import { DOMSerializer, type Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
+import { toast } from "sonner";
 import {
   Bold,
   Columns3,
@@ -627,6 +628,14 @@ export function Editor({
     return true;
   };
 
+  const removeImageUpload = (uploadId: string): boolean => {
+    const match = findImageNodeByUploadId(uploadId);
+    if (!match) return false;
+
+    editor.view.dispatch(editor.state.tr.delete(match.pos, match.pos + 1));
+    return true;
+  };
+
   const cleanupUpload = (uploadId: string, options?: { revokeBlob?: boolean }): void => {
     const shouldRevoke = options?.revokeBlob ?? true;
     const objectUrl = objectUrlByUploadIdRef.current.get(uploadId);
@@ -679,27 +688,13 @@ export function Editor({
       }
 
       if (!resolved?.src) {
-        finalizeImageUpload(uploadId, (attrs) => ({
-          ...attrs,
-          uploading: false,
-          uploadError: "Upload failed",
-        }));
-        cleanupUpload(uploadId, { revokeBlob: false });
+        removeImageUpload(uploadId);
+        cleanupUpload(uploadId, { revokeBlob: true });
+        toast.error("Image upload failed. The temporary image was removed.");
         return;
       }
 
-      const preloaded = await preloadImageSource(resolved.src);
-      if (!preloaded) {
-        finalizeImageUpload(uploadId, (attrs) => ({
-          ...attrs,
-          uploading: false,
-          uploadError: "Image uploaded, but preview failed to load",
-        }));
-        cleanupUpload(uploadId, { revokeBlob: false });
-        return;
-      }
-
-      finalizeImageUpload(uploadId, (attrs): UploadableImageAttrs | null => {
+      const finalized = finalizeImageUpload(uploadId, (attrs): UploadableImageAttrs | null => {
         const expectedBlob = expectedBlobByUploadIdRef.current.get(uploadId);
         const currentSrc = typeof attrs.src === "string" ? attrs.src : "";
         if (!expectedBlob || currentSrc !== expectedBlob) return null;
@@ -716,13 +711,17 @@ export function Editor({
       });
 
       cleanupUpload(uploadId, { revokeBlob: true });
+      if (!finalized) return;
+
+      const preloaded = await preloadImageSource(resolved.src);
+      if (!preloaded) {
+        toast.warning("Image uploaded. The preview may take a moment to appear.");
+      }
     } catch (error) {
-      finalizeImageUpload(uploadId, (attrs) => ({
-        ...attrs,
-        uploading: false,
-        uploadError: error instanceof Error ? error.message : "Upload failed",
-      }));
-      cleanupUpload(uploadId, { revokeBlob: false });
+      const message = error instanceof Error ? error.message : "Upload failed";
+      removeImageUpload(uploadId);
+      cleanupUpload(uploadId, { revokeBlob: true });
+      toast.error(message);
     }
   };
 
