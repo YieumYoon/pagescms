@@ -152,7 +152,10 @@ const prepareMediaUpload = async (file: File): Promise<File> => {
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : "Unknown error";
-    throw new Error(`Failed to convert ${file.name} to WebP: ${reason}`);
+    console.warn(
+      `Browser WebP conversion unavailable for ${file.name}; falling back to server conversion: ${reason}`,
+    );
+    return file;
   } finally {
     image?.cleanup();
   }

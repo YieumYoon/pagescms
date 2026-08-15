@@ -14,6 +14,7 @@ import { createHttpError, toErrorResponse } from "@/lib/api-error";
 import mergeWith from "lodash.mergewith";
 import { buildCommitTokens, resolveCommitIdentity, resolveCommitMessage } from "@/lib/commit-message";
 import { requireApiUserSession } from "@/lib/session-server";
+import { prepareServerMediaUpload } from "@/lib/server-image-upload";
 
 /**
  * Create, update and delete individual files in a GitHub repository.
@@ -38,6 +39,7 @@ export async function POST(
     if (!token) throw new Error("Token not found");
 
     const normalizedPath = normalizePath(params.path);
+    let savePath = normalizedPath;
 
     const config = await getConfig(params.owner, params.repo, params.branch, {
       getToken: async () => token,
@@ -179,7 +181,18 @@ export async function POST(
             !schema.extensions.includes(getFileExtension(normalizedPath))
           ) throw new Error(`Invalid extension "${getFileExtension(normalizedPath)}" for media.`);
 
-          contentBase64 = data.content;
+          const canStoreWebp =
+            !schema.extensions?.length || schema.extensions.includes("webp");
+          if (!data.sha && canStoreWebp) {
+            const preparedUpload = await prepareServerMediaUpload(
+              normalizedPath,
+              data.content,
+            );
+            savePath = preparedUpload.path;
+            contentBase64 = preparedUpload.contentBase64;
+          } else {
+            contentBase64 = data.content;
+          }
         }
         break;
       case "settings":
@@ -214,7 +227,7 @@ export async function POST(
       params.owner,
       params.repo,
       params.branch,
-      normalizedPath,
+      savePath,
       contentBase64,
       data.sha,
       {
@@ -269,9 +282,11 @@ export async function POST(
 
     return Response.json({
       status: "success",
-      message: savedPath !== normalizedPath
-        ? `File "${normalizedPath}" saved successfully but renamed to "${savedPath}" to avoid naming conflict.`
-        : `File "${normalizedPath}" saved successfully.`,
+      message: savePath !== normalizedPath
+        ? `File "${normalizedPath}" converted and saved as "${savedPath}".`
+        : savedPath !== normalizedPath
+          ? `File "${normalizedPath}" saved successfully but renamed to "${savedPath}" to avoid naming conflict.`
+          : `File "${normalizedPath}" saved successfully.`,
       data: {
         type: response?.data.content?.type,
         sha: response?.data.content?.sha,
