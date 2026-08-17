@@ -112,6 +112,10 @@ If cache state is known stale or corrupted, clear it with:
 npm run db:clear-cache
 ```
 
+Pages CMS checks the active GitHub branch periodically. When the branch head
+changes outside Pages CMS, the next collection or media request invalidates the
+cached files for that branch and reloads them from GitHub before returning.
+
 7. Start the app:
 
 ```bash

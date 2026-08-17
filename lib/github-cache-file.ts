@@ -7,7 +7,11 @@ import { eq, and, inArray, sql } from "drizzle-orm";
 import { cacheFileMetaTable, cacheFileTable } from "@/db/schema";
 import { createOctokitInstance } from "@/lib/utils/octokit";
 import { getParentPath } from "@/lib/utils/file";
-import { getCacheFileMeta, upsertCacheFileMeta } from "@/lib/github-cache-meta";
+import {
+  deleteCacheFileMeta,
+  getCacheFileMeta,
+  upsertCacheFileMeta,
+} from "@/lib/github-cache-meta";
 import {
   BRANCH_CACHE_SCOPE,
   getCacheFileMetaKey,
@@ -249,7 +253,15 @@ const reconcileFileCache = async (
 
   const job = (async () => {
     try {
-      const head = await getBranchHeadInfo(owner, repo, branch, token);
+      const [cachedMeta, head] = await Promise.all([
+        getCacheFileMeta(owner, repo, branch, BRANCH_CACHE_SCOPE),
+        getBranchHeadInfo(owner, repo, branch, token, { force: true }),
+      ]);
+
+      if (!cachedMeta || cachedMeta.commitSha !== head.sha) {
+        await clearFileCache(owner, repo, branch);
+        await deleteCacheFileMeta(owner, repo, branch);
+      }
 
       await upsertCacheFileMeta(owner, repo, branch, {
         path: BRANCH_CACHE_SCOPE.path,
@@ -804,7 +816,7 @@ const getCollectionCache = async (
   token: string,
   nodeEntryFilename?: string
 ) => {
-  void ensureFileCacheFreshness(owner, repo, branch, token).catch(() => {});
+  await ensureFileCacheFreshness(owner, repo, branch, token);
   const scope = getFolderScope("collection", dirPath);
   const { scopeMeta: stableMeta, branchMeta } = await waitForScopeAndBranchMeta(
     owner,
@@ -999,7 +1011,7 @@ const getMediaCache = async (
   token: string,
   nocache?: boolean
 ) => {
-  void ensureFileCacheFreshness(owner, repo, branch, token).catch(() => {});
+  await ensureFileCacheFreshness(owner, repo, branch, token);
   const scope = getFolderScope("media", path);
   const metaState = nocache
     ? { scopeMeta: null, branchMeta: null }
